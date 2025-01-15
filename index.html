@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat con Webhook</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #74ebd5, #9face6);
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 50px auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        h1 {
+            text-align: center;
+            color: #6c63ff;
+        }
+        input, button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            background: #6c63ff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .messages, .requests {
+            max-height: 200px;
+            overflow-y: auto;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 5px;
+            background: #f4f4f4;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Chat con Webhook</h1>
+        
+        <div id="login">
+            <input type="text" id="username" placeholder="Nombre de usuario">
+            <button onclick="startChat()">Entrar</button>
+        </div>
+
+        <div id="chat" style="display: none;">
+            <h2>Mensajes Directos</h2>
+            <input type="text" id="recipient" placeholder="Nombre del destinatario">
+            <input type="text" id="messageInput" placeholder="Escribe un mensaje">
+            <button onclick="sendMessage()">Enviar MD</button>
+            <div class="messages" id="messages"></div>
+
+            <h2>Solicitudes de Amistad</h2>
+            <input type="text" id="friendName" placeholder="Nombre de usuario para enviar solicitud">
+            <button onclick="sendFriendRequest()">Enviar Solicitud</button>
+            <div class="requests" id="friendRequests"></div>
+        </div>
+    </div>
+
+    <script>
+        const webhookURL = "https://discordapp.com/api/webhooks/1328880330999861311/zRHGp5r6AMTx03Q16igKMap6yK5eTlu6V4KH7aACJzlHghjfyOD2GNWT2wCSrI_MKWX3";
+
+        let currentUser = "";
+        const users = {};
+        const friendRequests = {};
+        const messages = {};
+
+        // Enviar datos a la webhook
+        async function sendToWebhook(content) {
+            try {
+                await fetch(webhookURL, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(content),
+                });
+            } catch (error) {
+                console.error("Error al enviar a la webhook:", error);
+            }
+        }
+
+        // Iniciar sesión
+        function startChat() {
+            const username = document.getElementById("username").value.trim();
+            if (!username) {
+                alert("Por favor, ingresa tu nombre de usuario.");
+                return;
+            }
+            currentUser = username;
+            if (!users[username]) users[username] = { friends: [] };
+            sendToWebhook({
+                content: `Nuevo usuario registrado: ${username}`,
+            });
+            document.getElementById("login").style.display = "none";
+            document.getElementById("chat").style.display = "block";
+        }
+
+        // Enviar mensaje directo
+        function sendMessage() {
+            const recipient = document.getElementById("recipient").value.trim();
+            const message = document.getElementById("messageInput").value.trim();
+            if (!recipient || !message) {
+                alert("Debes ingresar un destinatario y un mensaje.");
+                return;
+            }
+            if (!users[recipient]) {
+                alert("El usuario no existe.");
+                return;
+            }
+            if (!messages[recipient]) messages[recipient] = [];
+            messages[recipient].push({ sender: currentUser, content: message });
+            sendToWebhook({
+                embeds: [
+                    {
+                        title: "Nuevo Mensaje Directo",
+                        description: `**De:** ${currentUser}\n**Para:** ${recipient}\n**Mensaje:** ${message}`,
+                        color: 5814783,
+                    },
+                ],
+            });
+            document.getElementById("messageInput").value = "";
+            alert(`Mensaje enviado a ${recipient}`);
+        }
+
+        // Enviar solicitud de amistad
+        function sendFriendRequest() {
+            const friendName = document.getElementById("friendName").value.trim();
+            if (!friendName) {
+                alert("Debes ingresar un nombre de usuario.");
+                return;
+            }
+            if (friendName === currentUser) {
+                alert("No puedes enviarte una solicitud a ti mismo.");
+                return;
+            }
+            if (!users[friendName]) {
+                alert("El usuario no existe.");
+                return;
+            }
+            if (!friendRequests[friendName]) friendRequests[friendName] = [];
+            friendRequests[friendName].push(currentUser);
+            sendToWebhook({
+                embeds: [
+                    {
+                        title: "Solicitud de Amistad",
+                        description: `**De:** ${currentUser}\n**Para:** ${friendName}`,
+                        color: 16776960,
+                    },
+                ],
+            });
+            alert(`Solicitud de amistad enviada a ${friendName}`);
+        }
+    </script>
+</body>
+</html>
